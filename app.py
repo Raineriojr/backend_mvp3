@@ -1,5 +1,5 @@
 from flask import Flask, redirect, request, jsonify
-from flask_openapi3 import OpenAPI, Info, Tag
+from flask_openapi3 import OpenAPI, Info, Tag, Header
 import requests
 from datetime import datetime
 from flask_cors import CORS
@@ -24,20 +24,14 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # tags
 doc_tag = Tag(name="Documentação",
               description="Documentação de rotas da aplicação")
-login_tag = Tag(name="Login", description="Login da aplicação")
-register_tag = Tag(name="Cadastro de usuário",
-                   description="CRUD de cadastro de usuário")
-user_list_tag = Tag(name="Lista de Usuários Fake",
+
+
+user_tag = Tag(name="Usuário", description="Rotas para acesso ao sistema")
+
+fake_user_tag = Tag(name="Lista de Usuários Fake",
                     description="Retorna lista de usuários fakes")
 
-friend_list_tag = Tag(name="Lista de amigos",
-                      description="Retorna lista de amigos cadastrados")
-friend_create_tag = Tag(name="Cadastro de amigo",
-                        description="Rota para cadastro de amigo")
-friend_update_tag = Tag(name="Altera dados de amigo",
-                        description="Rota para update de amigo")
-friend_delete_tag = Tag(name="Remover um amigo",
-                        description="Remove um amigo da sua lista de amizades")
+friends_tag = Tag(name="Amigos", description="CRUD de amigos")
 
 
 @app.get("/", tags=[doc_tag])
@@ -48,7 +42,7 @@ def index():
 
 @app.post(
     '/register',
-    tags=[register_tag],
+    tags=[user_tag],
     responses={"200": UserViewSchema, "404": ErrorSchema, "400": ErrorSchema}
 )
 def register(body: UserSchema):
@@ -80,7 +74,7 @@ def register(body: UserSchema):
 
 @app.post(
     '/login',
-    tags=[login_tag],
+    tags=[user_tag],
     responses={"200": UserLoginViewSchema,
                "404": ErrorSchema, "400": ErrorSchema}
 )
@@ -117,9 +111,9 @@ def login(body: UserLoginSchema):
 # api externa
 
 
-@app.get("/users_list", tags=[user_list_tag])
+@app.get("/users_list", tags=[fake_user_tag])
 def fakeUsers():
-    """Retorna lista de usuários falsos"""
+    """Retorna lista de sugestão de amizade"""
 
     try:
         url = "https://randomuser.me/api/?results=5"
@@ -137,11 +131,11 @@ def fakeUsers():
 # ----------------------------------------------------------- #
 
 
-@app.get("/friends_list", tags=[user_list_tag], responses={"200": FriendViewSchema, "404": ErrorSchema},)
+@app.get("/friends_list", tags=[friends_tag], responses={"200": FriendViewSchema, "404": ErrorSchema},)
 def friends_list():
     """Retorna lista de amigos"""
 
-    authorization_header = request.headers.get('Authorization')
+    authorization_header = 1
 
     if not authorization_header:
         return {"error": "Erro ao listar contatos. Necessário autorização"}, 401
@@ -172,7 +166,7 @@ def friends_list():
 
 @app.post(
     "/friends/create",
-    tags=[friend_create_tag],
+    tags=[friends_tag],
     responses={"200": FriendViewSchema, "404": ErrorSchema},
 )
 def createContact(body: FriendSchema):
@@ -180,7 +174,7 @@ def createContact(body: FriendSchema):
     try:
         friend_data = FriendSchema.parse_obj(request.get_json())
 
-        authorization_header = request.headers.get('Authorization')
+        authorization_header = 1
 
         if not authorization_header:
             return {"error": "Erro ao cadastrar novo amigo. Necessário autorização"}, 401
@@ -217,11 +211,13 @@ def createContact(body: FriendSchema):
 
 @app.put(
     "/friends/<int:friend_id>/update",
-    tags=[friend_update_tag],
+    tags=[friends_tag],
     responses={"200": FriendResponseSchema, "400": ErrorSchema},
 )
 def contactUpdate(path: FriendRemoveUpdateSchema, body: FriendUpdateSchema):
-    authorization_header = request.headers.get('Authorization')
+    """Atualiza dados de amigo"""
+
+    authorization_header = 1
     friend_id: int = request.view_args.get("friend_id")
     friend_data = FriendUpdateSchema.parse_obj(request.get_json())
 
@@ -266,11 +262,13 @@ def contactUpdate(path: FriendRemoveUpdateSchema, body: FriendUpdateSchema):
 
 @app.delete(
     "/friends/<int:friend_id>/delete",
-    tags=[friend_delete_tag],
+    tags=[friends_tag],
     responses={"200": FriendResponseSchema, "400": ErrorSchema},
 )
 def deleteContact(path: FriendRemoveUpdateSchema):
-    authorization_header = request.headers.get('Authorization')
+    """Remove um amigo"""
+
+    authorization_header = 1
     friend_id: int = request.view_args.get("friend_id")
 
     if not authorization_header:
